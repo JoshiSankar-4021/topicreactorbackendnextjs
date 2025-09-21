@@ -16,7 +16,8 @@ await prisma.user.upsert({
     where: { email: "admin@gmail.com" },
     update: {},
     create: {
-    name: "Admin",
+    firstname: "SuperAdmin",
+    lastname:"admin",
     email: "admin@gmail.com",
     password: "admin@1234",
     address: "India",

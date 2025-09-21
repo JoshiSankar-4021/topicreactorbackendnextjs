@@ -21,7 +21,8 @@ model Education{
 
 model User{
   userid    BigInt @id @default(autoincrement())
-  name      String @db.VarChar(100)
+  firstname String @db.VarChar(100)
+  lastname  String @db.VarChar(100)
   email     String @unique @db.VarChar(50)
   password  String @db.VarChar(50)
   address   String
