@@ -61,6 +61,24 @@ if(action === "geteducation") {
     }
 }
 
+if(action==="getprofile"){
+    try{
+    const { userid } = req.query;
+    const query=`SELECT * FROM "User" where userid=$1`;
+    const values=[userid];
+    const result = await pool.query(query,values);
+    if(result.rowCount===1){
+        return res.status(200).json({ data: result.rows[0] });
+    }else{
+        return res.status(400).json("User Not Found");
+    }
+    }catch(err){
+    console.error("DB Fetch Education Error:", err);
+    return res.status(500).json({ message: "Database error", error: err.message });
+    }
+}
+
+
 return res.status(400).json({ message: "Invalid GET action" });
 }
 
