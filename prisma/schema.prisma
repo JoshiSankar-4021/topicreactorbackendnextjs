@@ -31,4 +31,15 @@ model User{
   gender    String @db.VarChar(1)
   author Education @relation(fields: [education], references: [eduId])
   status   Int    @default(1) @db.SmallInt
+  topics Topic[]
+}
+
+model Topic{
+  topicid BigInt @id @default(autoincrement())
+  topic String @db.VarChar(100)
+  reason  String @db.VarChar(1000)
+  createdby BigInt
+  createdon  DateTime @default(now())
+  status Int @default(1) @db.SmallInt
+  author User @relation(fields:[createdby],references:[userid])
 }

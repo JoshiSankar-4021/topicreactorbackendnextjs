@@ -82,6 +82,53 @@ if(action==="getprofile"){
 return res.status(400).json({ message: "Invalid GET action" });
 }
 
+if (req.method === "PUT") {
+if (action === "updateprofile") {
+const { userid } = req.query;
+const {
+    firstname,
+    lastname,
+    email,
+    password,
+    retypepassword,
+    address,
+    gender,
+    phone,
+    education
+} = req.body;
+
+// Build dynamic query to update only provided fields
+let fields = [];
+let values = [];
+let idx = 1;
+
+if (firstname !== undefined) { fields.push(`firstname=$${idx++}`); values.push(firstname); }
+if (lastname !== undefined) { fields.push(`lastname=$${idx++}`); values.push(lastname); }
+if (email !== undefined) { fields.push(`email=$${idx++}`); values.push(email); }
+if (password !== undefined) { fields.push(`password=$${idx++}`); values.push(password); }
+if (retypepassword !== undefined) { fields.push(`retypepassword=$${idx++}`); values.push(retypepassword); }
+if (address !== undefined) { fields.push(`address=$${idx++}`); values.push(address); }
+if (gender !== undefined) { fields.push(`gender=$${idx++}`); values.push(gender); }
+if (phone !== undefined) { fields.push(`phone=$${idx++}`); values.push(phone); }
+if (education !== undefined) { fields.push(`education=$${idx++}`); values.push(education); }
+
+if (fields.length === 0) {
+    return res.status(400).json({ message: "No fields to update" });
+}
+
+const query = `UPDATE "User" SET ${fields.join(", ")} WHERE userid=$${idx}`;
+values.push(userid);
+
+try {
+    const result = await pool.query(query, values);
+    return res.status(200).json({ message: "Profile updated", data: result.rows[0] });
+} catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Error updating profile" });
+}
+}
+}
+
 // If unknown method
 return res.status(405).json({ message: "Method not allowed" });
 }
