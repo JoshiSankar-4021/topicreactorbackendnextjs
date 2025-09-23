@@ -6,13 +6,13 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST,GET,PUT,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
+  const { action } = req.query;
+
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
   if (req.method === "POST") {
-    const { action } = req.query;
-
     if (action === "createtopic") {
       const { topic, reason, createdby } = req.body;
       try {
@@ -28,7 +28,27 @@ export default async function handler(req, res) {
     } else {
       return res.status(400).json({ message: "Invalid action" });
     }
-  } else {
+      }
+      if(req.method === "GET"){
+        if(action === "getalltopics"){
+          try{
+            const selectquery=`SELECT * FROM "Topic"`;
+            const result= await pool.query(selectquery);
+            res.status(200).json({topics:result.rows});
+          }catch(err){
+            console.log(err)
+            res.status(500).json({message:"Failde to fetch Topics"});
+          }
+        }
+
+        if(action === "gettopicbyuserid"){
+          const {createdby}=req.query;
+          const selectquery = `select t.topicid,t.topic,t.reason from "Topic" t where createdby=$1`;
+          const values=[createdby];
+          const result = await pool.query(selectquery,values);
+          res.status(200).json({topics:result.rows});
+        }
+      }else {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
 }

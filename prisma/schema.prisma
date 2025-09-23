@@ -32,6 +32,7 @@ model User{
   author Education @relation(fields: [education], references: [eduId])
   status   Int    @default(1) @db.SmallInt
   topics Topic[]
+  comments Comment[]
 }
 
 model Topic{
@@ -42,4 +43,17 @@ model Topic{
   createdon  DateTime @default(now())
   status Int @default(1) @db.SmallInt
   author User @relation(fields:[createdby],references:[userid])
+  comments Comment[]
+}
+
+model Comment {
+  commentid   BigInt   @id @default(autoincrement())
+  comment     String   @db.VarChar(700)
+  topicid     BigInt
+  commentedby BigInt
+  Commentedon DateTime @default(now())
+
+  // Relations
+  topic  Topic @relation(fields: [topicid], references: [topicid])
+  author User  @relation(fields: [commentedby], references: [userid])
 }
