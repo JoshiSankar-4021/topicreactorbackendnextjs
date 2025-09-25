@@ -29,26 +29,37 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: "Invalid action" });
     }
       }
-      if(req.method === "GET"){
-        if(action === "getalltopics"){
-          try{
-            const selectquery=`SELECT * FROM "Topic"`;
-            const result= await pool.query(selectquery);
-            res.status(200).json({topics:result.rows});
-          }catch(err){
-            console.log(err)
-            res.status(500).json({message:"Failde to fetch Topics"});
-          }
+      if (req.method === "GET") {
+      if (action === "getalltopics") {
+        try {
+          const selectquery = `
+            SELECT 
+              t.topicid,
+              t.topic,
+              t.reason,
+              COALESCE(json_agg(c.comment) FILTER (WHERE c.comment IS NOT NULL), '[]') AS comments
+            FROM "Topic" t
+            LEFT JOIN "Comment" c ON t.topicid = c.topicid
+            GROUP BY t.topicid, t.topic, t.reason
+            ORDER BY t.topicid DESC;
+          `;
+          const result = await pool.query(selectquery);
+          res.status(200).json({ topics: result.rows });
+        } catch (err) {
+          console.error(err);
+          res.status(500).json({ message: "Failed to fetch Topics" });
         }
 
-        if(action === "gettopicbyuserid"){
+      }
+      if(action === "gettopicbyuserid"){
           const {createdby}=req.query;
           const selectquery = `select t.topicid,t.topic,t.reason from "Topic" t where createdby=$1`;
           const values=[createdby];
           const result = await pool.query(selectquery,values);
           res.status(200).json({topics:result.rows});
         }
-      }else {
+      else {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
+}
 }

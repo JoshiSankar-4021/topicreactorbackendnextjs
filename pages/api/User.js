@@ -76,8 +76,18 @@ if(action==="getprofile"){
     console.error("DB Fetch Education Error:", err);
     return res.status(500).json({ message: "Database error", error: err.message });
     }
+
 }
 
+    if(action === "getallusers"){
+        const query = `SELECT u.userid,u.firstname,u.lastname,u.email  FROM "User" u`
+        const result = await pool.query(query);
+        if(result.rowCount>0){
+            return res.status(200).json({users:result.rows});
+        }else{
+            return res.status(400).json("NO USERS FOUND");
+        }
+    }
 
 return res.status(400).json({ message: "Invalid GET action" });
 }
