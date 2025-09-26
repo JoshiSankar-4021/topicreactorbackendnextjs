@@ -27,25 +27,33 @@ export default async function Comment(req,res){
     }
 
     if (req.method === "GET") {
-  if (action === "comments_by_commentedby") {
-    const { commentedby } = req.query;
+      if (action === "comments_by_commentedby") {
+        const { commentedby } = req.query;
 
-    const query = `
-      SELECT
-        c.commentid,
-        c.comment,
-        t.topic
-      FROM "Comment" c
-      JOIN "Topic" t ON c.topicid = t.topicid
-      WHERE c.commentedby = $1
-      ORDER BY t.topicid ASC, c.commentid ASC
-    `;
+        const query = `
+          SELECT
+            c.commentid,
+            c.comment,
+            t.topic
+          FROM "Comment" c
+          JOIN "Topic" t ON c.topicid = t.topicid
+          WHERE c.commentedby = $1 and c.status=1
+          ORDER BY t.topicid ASC, c.commentid ASC
+        `;
 
-    const values = [commentedby];
-    const result = await pool.query(query, values);
+        const values = [commentedby];
+        const result = await pool.query(query, values);
 
-    res.status(200).json({ comments: result.rows });
-  }
-}
-
+        res.status(200).json({ comments: result.rows });
+      }
+    }
+      if(req.method === "DELETE"){
+          if (action === "deleteby_comment_id") {
+          const { commentid } = req.query;
+          const values = [0, commentid];
+          const deletecommentquery = `UPDATE "Comment" SET status=$1 WHERE commentid=$2`;
+          await pool.query(deletecommentquery, values);
+          res.status(200).json({ message: "Comment Deleted" });
+        }
+      }
 }

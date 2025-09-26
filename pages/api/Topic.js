@@ -34,14 +34,16 @@ export default async function handler(req, res) {
         try {
           const selectquery = `
             SELECT 
-              t.topicid,
-              t.topic,
-              t.reason,
-              COALESCE(json_agg(c.comment) FILTER (WHERE c.comment IS NOT NULL), '[]') AS comments
-            FROM "Topic" t
-            LEFT JOIN "Comment" c ON t.topicid = c.topicid
-            GROUP BY t.topicid, t.topic, t.reason
-            ORDER BY t.topicid DESC;
+            t.topicid,
+            t.topic,
+            t.reason,
+            COALESCE(json_agg(c.comment) FILTER (WHERE c.comment IS NOT NULL AND c.status = 1), '[]') AS comments
+          FROM "Topic" t
+          LEFT JOIN "Comment" c 
+            ON t.topicid = c.topicid
+          WHERE t.status = 1
+          GROUP BY t.topicid, t.topic, t.reason
+          ORDER BY t.topicid DESC
           `;
           const result = await pool.query(selectquery);
           res.status(200).json({ topics: result.rows });
@@ -53,13 +55,31 @@ export default async function handler(req, res) {
       }
       if(action === "gettopicbyuserid"){
           const {createdby}=req.query;
-          const selectquery = `select t.topicid,t.topic,t.reason from "Topic" t where createdby=$1`;
+          const selectquery = `select t.topicid,t.topic,t.reason from "Topic" t where createdby=$1 and t.status=1
+          ORDER BY t.topicid ASC`;
           const values=[createdby];
           const result = await pool.query(selectquery,values);
           res.status(200).json({topics:result.rows});
         }
       else {
     return res.status(405).json({ message: "Method Not Allowed" });
+  }
+}
+
+if(req.method === "DELETE"){
+  if(action === "delete_topic"){
+    const {topicid} = req.query;
+    const values=[0,topicid];
+
+    //removing topics
+    const deletetopicquery = `UPDATE "Topic" SET status = $1 WHERE topicid = $2`;
+    await pool.query(deletetopicquery,values);
+
+    //removing comments
+    const deletcommentquery = `UPDATE "Comment" SET status = $1 WHERE topicid = $2`;
+    await pool.query(deletcommentquery,values)
+    
+    res.status(200).json({message:"Topic Deleted"});
   }
 }
 }

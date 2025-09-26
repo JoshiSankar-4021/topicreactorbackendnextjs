@@ -16,6 +16,7 @@ datasource db {
 model Education{
   eduId         Int @id @default(autoincrement())
   educationname String @db.VarChar(20)
+  status   Int    @default(1) @db.SmallInt
   users    User[]
 }
 
@@ -52,6 +53,7 @@ model Comment {
   topicid     BigInt
   commentedby BigInt
   Commentedon DateTime @default(now())
+  status   Int    @default(1) @db.SmallInt
 
   // Relations
   topic  Topic @relation(fields: [topicid], references: [topicid])

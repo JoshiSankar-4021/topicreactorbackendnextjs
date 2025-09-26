@@ -3,7 +3,7 @@ async function User(req, res) {
 const FRONTEND_URL = process.env.FRONTEND_URL;
 
 res.setHeader("Access-Control-Allow-Origin", FRONTEND_URL);
-res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
 res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
 if(req.method === "OPTIONS") {
@@ -30,8 +30,8 @@ if(action === "registeruser") {
 
 if(action === "login") {
     const { email, password } = req.body;
-    const query = `SELECT "userid" FROM "User" WHERE email=$1 AND password=$2 AND status=1`;
-    const values = [email, password];
+    const query = `SELECT "userid" FROM "User" WHERE email=$1 AND password=$2 AND status=$3`;
+    const values = [email, password,1];
 
     try {
     const result = await pool.query(query, values);
@@ -80,9 +80,11 @@ if(action==="getprofile"){
 }
 
     if(action === "getallusers"){
-        const query = `SELECT u.userid,u.firstname,u.lastname,u.email  FROM "User" u`
+        const query = `SELECT u.userid, u.firstname, u.lastname, u.email
+                FROM "User" u 
+                ORDER BY u.userid ASC`;
         const result = await pool.query(query);
-        if(result.rowCount>0){
+        if(result.rowCount>0){ 
             return res.status(200).json({users:result.rows});
         }else{
             return res.status(400).json("NO USERS FOUND");
@@ -92,54 +94,29 @@ if(action==="getprofile"){
 return res.status(400).json({ message: "Invalid GET action" });
 }
 
-if (req.method === "PUT") {
-if (action === "updateprofile") {
-const { userid } = req.query;
-const {
-    firstname,
-    lastname,
-    email,
-    password,
-    retypepassword,
-    address,
-    gender,
-    phone,
-    education
-} = req.body;
+if(req.method === "DELETE"){
+    if(action === "delete_user"){
+        const {userid} = req.query;
+        
+        const values = [0,parseInt(userid)];
+        
+        //DELETE User
+        const deleteuserquery = `UPDATE "User" SET status=$1 WHERE userid=$2`;
+        await pool.query(deleteuserquery,values);
 
-// Build dynamic query to update only provided fields
-let fields = [];
-let values = [];
-let idx = 1;
+        // //DELETE Topics
+        const deletetopics = `UPDATE "Topic" SET status=$1 WHERE createdby=$2`;
+        await pool.query(deletetopics,values);
 
-if (firstname !== undefined) { fields.push(`firstname=$${idx++}`); values.push(firstname); }
-if (lastname !== undefined) { fields.push(`lastname=$${idx++}`); values.push(lastname); }
-if (email !== undefined) { fields.push(`email=$${idx++}`); values.push(email); }
-if (password !== undefined) { fields.push(`password=$${idx++}`); values.push(password); }
-if (retypepassword !== undefined) { fields.push(`retypepassword=$${idx++}`); values.push(retypepassword); }
-if (address !== undefined) { fields.push(`address=$${idx++}`); values.push(address); }
-if (gender !== undefined) { fields.push(`gender=$${idx++}`); values.push(gender); }
-if (phone !== undefined) { fields.push(`phone=$${idx++}`); values.push(phone); }
-if (education !== undefined) { fields.push(`education=$${idx++}`); values.push(education); }
+        //DELETE Comments
+        const userIdInt =parseInt(userid)
+        const valuearr=[0,userIdInt]
+        const deleteCommentsQuery = `UPDATE "Comment" SET status = $1 WHERE topicid IN (SELECT topicid FROM "Topic" WHERE commentedby=$2)`;
+        await pool.query(deleteCommentsQuery,valuearr);
 
-if (fields.length === 0) {
-    return res.status(400).json({ message: "No fields to update" });
+        res.status(200).json({message:"Deleted User"})
+    }
 }
-
-const query = `UPDATE "User" SET ${fields.join(", ")} WHERE userid=$${idx}`;
-values.push(userid);
-
-try {
-    const result = await pool.query(query, values);
-    return res.status(200).json({ message: "Profile updated", data: result.rows[0] });
-} catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Error updating profile" });
-}
-}
-}
-
-// If unknown method
 return res.status(405).json({ message: "Method not allowed" });
 }
 
