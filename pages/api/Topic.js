@@ -82,4 +82,16 @@ if(req.method === "DELETE"){
     res.status(200).json({message:"Topic Deleted"});
   }
 }
+
+if(req.method === "PUT"){
+    if(action === "updatetopic"){
+      const {topicid} = req.query;
+      const {topic,reason} = req.body;
+      const values =[topicid,topic,reason];
+      const updatetopic = `update "Topic" set topic=$2,reason=$3 where topicid=$1 `;
+      await pool.query(updatetopic,values);
+      res.status(200).json({message:"Updated Topic"})
+    }
+  }
+
 }

@@ -40,13 +40,12 @@ export default async function Comment(req,res){
           WHERE c.commentedby = $1 and c.status=1
           ORDER BY t.topicid ASC, c.commentid ASC
         `;
-
         const values = [commentedby];
         const result = await pool.query(query, values);
-
         res.status(200).json({ comments: result.rows });
       }
     }
+
       if(req.method === "DELETE"){
           if (action === "deleteby_comment_id") {
           const { commentid } = req.query;
@@ -54,6 +53,17 @@ export default async function Comment(req,res){
           const deletecommentquery = `UPDATE "Comment" SET status=$1 WHERE commentid=$2`;
           await pool.query(deletecommentquery, values);
           res.status(200).json({ message: "Comment Deleted" });
+        }
+      }
+
+      if(req.method === "PUT"){
+        if(action === "updatecomment"){
+          const {commentid} = req.query;
+          const {comment} = req.body;
+          const values =[commentid,comment];
+          const updatecomment = `update "Comment" set comment=$2 where commentid=$1 `;
+          await pool.query(updatecomment,values);
+          res.status(200).json({message:"Updated Comment"})
         }
       }
 }
