@@ -1,11 +1,8 @@
 import { pool } from "../../lib/database";
-
+import {cors} from "../../lib/cors";
 export default async function handler(req, res) {
-  const FRONTEND_URL = process.env.FRONTEND_URL;
-  res.setHeader("Access-Control-Allow-Origin", FRONTEND_URL);
-  res.setHeader("Access-Control-Allow-Methods", "POST,GET,PUT,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
+ const handled = cors(req, res);
+ if (handled) return;
   const { action } = req.query;
 
   if (req.method === "OPTIONS") {

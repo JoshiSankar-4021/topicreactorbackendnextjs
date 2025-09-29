@@ -1,15 +1,9 @@
 import { pool } from "../../lib/database";
+import {cors} from "../../lib/cors";
 async function User(req, res) {
-const FRONTEND_URL = process.env.FRONTEND_URL;
 
-res.setHeader("Access-Control-Allow-Origin", FRONTEND_URL);
-res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-if(req.method === "OPTIONS") {
-return res.status(200).end(); // handle preflight
-}
-
+const handled = cors(req, res);
+if (handled) return;
 const action = req.query.action;
 
 if(req.method === "POST") {
