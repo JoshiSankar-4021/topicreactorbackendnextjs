@@ -34,6 +34,8 @@ model User{
   status   Int    @default(1) @db.SmallInt
   topics Topic[]
   comments Comment[]
+  posts Post[]
+  likes PostLikes[]
 }
 
 model Topic{
@@ -54,8 +56,35 @@ model Comment {
   commentedby BigInt
   Commentedon DateTime @default(now())
   status   Int    @default(1) @db.SmallInt
-
   // Relations
   topic  Topic @relation(fields: [topicid], references: [topicid])
   author User  @relation(fields: [commentedby], references: [userid])
+}
+
+model Post{
+  postid BigInt @id @default(autoincrement())
+  caption String @db.VarChar(100000)
+  fileurl String
+  postedby BigInt
+  postedon DateTime @default(now())
+  likescount BigInt @default(0)
+  dislikescount BigInt @default(0)
+  sharecount BigInt @default(0)
+  commentscount BigInt @default(0)
+  status Int @default(1) @db.SmallInt
+  author User @relation(fields:[postedby],references:[userid])
+  likes PostLikes[]
+}
+
+model PostLikes {
+  likeid    BigInt      @id @default(autoincrement())
+  postid    BigInt
+  userid    BigInt
+  createdAt DateTime @default(now())
+  status Int @default(1) @db.SmallInt
+  // Relations
+  post Post @relation(fields: [postid], references: [postid], onDelete: Cascade)
+  user User @relation(fields: [userid], references: [userid], onDelete: Cascade)
+  // Unique
+  @@unique([postid, userid])
 }
