@@ -37,6 +37,7 @@ export default async function handler(req, res) {
   // Optional: CORS middleware (install nextjs-cors if needed for cross-origin requests)
   // import NextCors from 'nextjs-cors';
   // await NextCors(req, res, { methods: ['GET', 'POST'], origin: '*' });
+  await cors(req, res);
 
   try {
     // Debug logs for Vercel (check in Function Logs)
