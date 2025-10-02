@@ -16,7 +16,10 @@ export default async function handler(req, res) {
   const action = req.query.action;
 
   // ------------------ POST: Create Post ------------------
-  if (req.method === "POST" && action === "createpost") {
+  if (req.method === "POST") {
+    if(action === "createpost"){
+
+    
     try {
       // Upload file to memory
       const file = await new Promise((resolve, reject) => {
@@ -55,10 +58,12 @@ export default async function handler(req, res) {
         file: { url: result.secure_url, originalname: file.originalname },
         postid: dbResult.rows[0].postid,
       });
+    
     } catch (err) {
       console.error("Upload Error:", err);
       res.status(500).json({ error: err.message });
     }
+  }
   }
 
   // ------------------ GET: Fetch Posts ------------------
