@@ -1,68 +1,101 @@
-// pages/api/Upload.js
 import multer from "multer";
-import { cloudinary } from "../../lib/cloudinary"; // config already in lib
+import { cloudinary } from "../../lib/cloudinary"; // your configured Cloudinary
 import { cors } from "../../lib/cors";
 import { pool } from "../../lib/database";
 
 export const config = {
-  api: { bodyParser: false }, // disable default parser
+  api: { bodyParser: false }, // required for multer
 };
 
-// Multer memory storage (works in Vercel)
+// Multer with memory storage (needed for Vercel)
 const upload = multer({ storage: multer.memoryStorage() });
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
   const action = req.query.action;
+  console.log("👉 Incoming request:", req.method, "action:", action);
 
-  try {
-    // -------------- POST: CREATE POST ----------------
-    if (req.method === "POST" && action === "createpost") {
-      // 1. Parse file
+  // ------------------ POST: Create Post ------------------
+  if (req.method === "POST" && action === "createpost") {
+    try {
+      console.log("📌 Starting file upload...");
+
+      // Handle file upload with multer
       const file = await new Promise((resolve, reject) => {
         upload.single("file")(req, res, (err) => {
-          if (err) return reject(err);
-          if (!req.file) return reject(new Error("❌ No file uploaded"));
+          if (err) {
+            console.error("❌ Multer error:", err);
+            return reject(err);
+          }
+          if (!req.file) {
+            console.error("❌ No file received in request");
+            return reject(new Error("No file uploaded"));
+          }
+          console.log("✅ File received:", {
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+          });
           resolve(req.file);
         });
       });
 
-      console.log("📂 Received file:", file.originalname, file.mimetype);
+      console.log("📌 Uploading to Cloudinary...");
 
-      // 2. Upload to Cloudinary
+      // Upload to Cloudinary
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           { resource_type: "auto", public_id: `post_${Date.now()}` },
           (err, result) => {
-            if (err) return reject(err);
+            if (err) {
+              console.error("❌ Cloudinary upload error:", err);
+              return reject(err);
+            }
+            console.log("✅ Cloudinary upload success:", result.secure_url);
             resolve(result);
           }
         );
         stream.end(file.buffer);
       });
 
-      console.log("☁️ Cloudinary Upload:", result.secure_url);
+      console.log("📌 Inserting into database...");
 
-      // 3. Save to DB
       const { caption } = req.body || {};
-      const { userid } = req.query || {};
+      const { userid } = req.query;
+
+      if (!userid) {
+        throw new Error("No userid provided in query params");
+      }
+
       const insertQuery = `
         INSERT INTO "Post" (caption, fileurl, postedby)
         VALUES ($1, $2, $3) RETURNING postid
       `;
-      const values = [caption, result.secure_url, userid];
-      const dbResult = await pool.query(insertQuery, values);
+      const values = [caption || "", result.secure_url, userid];
 
-      return res.status(200).json({
-        message: "✅ File uploaded successfully",
-        file: { url: result.secure_url, originalname: file.originalname },
+      const dbResult = await pool.query(insertQuery, values);
+      console.log("✅ Database insert success. PostID:", dbResult.rows[0].postid);
+
+      res.status(200).json({
+        message: "File uploaded successfully",
+        file: {
+          url: result.secure_url,
+          originalname: file.originalname,
+        },
         postid: dbResult.rows[0].postid,
       });
-    }
 
-    // -------------- GET: FETCH POSTS ----------------
-    if (req.method === "GET" && action === "fetchimages") {
+    } catch (err) {
+      console.error("❌ Upload Error (catch block):", err.message, err.stack);
+      res.status(500).json({ error: err.message });
+    }
+  }
+
+  // ------------------ GET: Fetch Images ------------------
+  if (req.method === "GET" && action === "fetchimages") {
+    try {
+      console.log("📌 Fetching images from DB...");
       const selectQuery = `
         SELECT p.postid, p.caption, p.fileurl, p.likescount, p.sharecount, p.commentscount,
                u.firstname, u.lastname
@@ -71,13 +104,13 @@ export default async function handler(req, res) {
         WHERE p.status = $1
         ORDER BY p.postid DESC
       `;
-      const result = await pool.query(selectQuery, [1]);
-      return res.status(200).json({ images: result.rows });
+      const values = [1];
+      const result = await pool.query(selectQuery, values);
+      console.log("✅ Fetched", result.rows.length, "images");
+      res.status(200).json({ images: result.rows });
+    } catch (err) {
+      console.error("❌ Fetch Images Error:", err.message);
+      res.status(500).json({ error: err.message });
     }
-
-    return res.status(405).json({ error: "Method Not Allowed" });
-  } catch (err) {
-    console.error("❌ Upload Error:", err);
-    return res.status(500).json({ error: err.message });
   }
 }
