@@ -4,24 +4,22 @@ import { cors } from "../../lib/cors";
 import { pool } from "../../lib/database";
 
 export const config = {
-  api: { bodyParser: false }, // required for multer
+  api: { bodyParser: false }, // needed for multer
 };
 
-// 1️⃣ Multer memory storage (works on Vercel)
+// Multer memory storage (works on Vercel)
 const upload = multer({ storage: multer.memoryStorage() });
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
   const action = req.query.action;
+  console.log("Request method:", req.method, "Action:", action);
 
   // ------------------ POST: Create Post ------------------
-  if (req.method === "POST") {
-    if(action === "createpost"){
-
-    
+  if (req.method === "POST" && action === "createpost") {
     try {
-      // Upload file to memory
+      // 1️⃣ Upload file to memory
       const file = await new Promise((resolve, reject) => {
         upload.single("file")(req, res, (err) => {
           if (err) return reject(err);
@@ -30,10 +28,13 @@ export default async function handler(req, res) {
         });
       });
 
+      console.log("File uploaded to memory:", file.originalname, "Size:", file.size);
+
       const { caption } = req.body;
       const { userid } = req.query;
+      console.log("Caption:", caption, "UserId:", userid);
 
-      // Upload directly to Cloudinary from memory buffer
+      // 2️⃣ Upload file to Cloudinary from memory
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           { resource_type: "auto", public_id: `post_${Date.now()}` },
@@ -45,7 +46,9 @@ export default async function handler(req, res) {
         stream.end(file.buffer);
       });
 
-      // Insert post into database
+      console.log("Cloudinary upload result:", result.secure_url);
+
+      // 3️⃣ Insert into database
       const insertQuery = `
         INSERT INTO "Post" (caption, fileurl, postedby)
         VALUES ($1, $2, $3) RETURNING postid
@@ -58,12 +61,10 @@ export default async function handler(req, res) {
         file: { url: result.secure_url, originalname: file.originalname },
         postid: dbResult.rows[0].postid,
       });
-    
     } catch (err) {
       console.error("Upload Error:", err);
       res.status(500).json({ error: err.message });
     }
-  }
   }
 
   // ------------------ GET: Fetch Posts ------------------
