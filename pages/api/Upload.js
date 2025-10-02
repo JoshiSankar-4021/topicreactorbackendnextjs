@@ -9,12 +9,10 @@ export const config = {
   },
 };
 
-// Multer setup with limits and validation for Vercel/serverless (prevents OOM/timeouts)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max to avoid memory issues
   fileFilter: (req, file, cb) => {
-    // Only allow images and videos
     if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
       cb(null, true);
     } else {
@@ -23,7 +21,6 @@ const upload = multer({
   },
 });
 
-// Async wrapper for middleware (e.g., Multer)
 function runMiddleware(req, res, fn) {
   return new Promise((resolve, reject) => {
     fn(req, res, (result) => {
@@ -34,44 +31,29 @@ function runMiddleware(req, res, fn) {
 }
 
 export default async function handler(req, res) {
-  // Optional: CORS middleware (install nextjs-cors if needed for cross-origin requests)
-  // import NextCors from 'nextjs-cors';
-  // await NextCors(req, res, { methods: ['GET', 'POST'], origin: '*' });
   await cors(req, res);
 
   try {
-    // Debug logs for Vercel (check in Function Logs)
     console.log('Handler invoked:', { 
       method: req.method, 
       action: req.query?.action,
       url: req.url 
     });
 
-    // Quick env/DB checks (remove after debugging)
     console.log('Cloudinary ready:', !!cloudinary.config?.cloud_name);
     console.log('DB pool active:', pool.totalCount > 0 || 'N/A');
 
-    // Optional: Test DB connection (remove after confirming)
-    // try {
-    //   await pool.query('SELECT 1');
-    //   console.log('DB ping successful');
-    // } catch (dbErr) {
-    //   console.error('DB connection failed:', dbErr.message);
-    // }
-
+    
     const { method } = req;
     const { action } = req.query;
 
     if (method === 'POST' && action === 'createpost') {
-      // Parse multipart/form-data with Multer
       await runMiddleware(req, res, upload.single('file'));
 
       if (!req.file) {
         console.log('No file uploaded');
         return res.status(400).json({ error: 'No file uploaded' });
       }
-
-      // Extract form fields (userid and caption from req.body, not query)
       const { caption } = req.body;
       const {userid} = req.query;
       if (!userid || typeof userid !== 'string' || userid.trim() === '') {
@@ -91,7 +73,7 @@ export default async function handler(req, res) {
           { 
             resource_type: 'auto', 
             public_id: `post_${userid}_${Date.now()}`, // Unique ID to avoid collisions
-            folder: 'posts' // Optional: Organize assets in Cloudinary
+            folder: `media_user/${useid}` // Optional: Organize assets in Cloudinary
           },
           (error, result) => {
             if (error) {
@@ -141,7 +123,7 @@ export default async function handler(req, res) {
       const selectQuery = `
         SELECT p.postid, p.caption, p.fileurl, u.firstname, u.lastname
         FROM "Post" p
-        JOIN "User " u ON p.postedby = u.userid  -- Fixed: No extra space in table name
+        JOIN "User" u ON p.postedby = u.userid  -- Fixed: No extra space in table name
         WHERE p.status = 1
         ORDER BY p.postid DESC
         LIMIT 50  -- Pagination to prevent overload on large datasets
