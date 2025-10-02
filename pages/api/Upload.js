@@ -1,6 +1,7 @@
 import multer from 'multer';
 import { cloudinary } from '../../lib/cloudinary'; // Ensure this uses process.env for config
 import { pool } from '../../lib/database'; // Ensure this uses process.env.DATABASE_URL
+import { cors } from '../../lib/cors'; // Your custom CORS from lib
 
 export const config = {
   api: {
@@ -33,11 +34,10 @@ function runMiddleware(req, res, fn) {
 }
 
 export default async function handler(req, res) {
-  // Optional: CORS middleware (install nextjs-cors if needed for cross-origin requests)
-  // import NextCors from 'nextjs-cors';
-  // await NextCors(req, res, { methods: ['GET', 'POST'], origin: '*' });
-
   try {
+    // Apply your custom CORS from lib (handles preflight OPTIONS requests)
+    await cors(req, res); // If your cors needs options, add: await cors(req, res, { methods: ['GET', 'POST'], origin: '*' });
+
     // Debug logs for Vercel (check in Function Logs)
     console.log('Handler invoked:', { 
       method: req.method, 
@@ -69,12 +69,12 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      // Extract form fields (userid and caption from req.body, not query)
-      const { caption } = req.body;
-      const {userid} = req.query;
+      // Extract form fields (prefer body for multipart POST, fallback to query)
+      const { caption = '' } = req.body;
+      const userid = req.body.userid || req.query.userid; // Fallback for flexibility
       if (!userid || typeof userid !== 'string' || userid.trim() === '') {
         console.log('Invalid or missing userid:', userid);
-        return res.status(400).json({ error: 'Valid userid required (as form field)' });
+        return res.status(400).json({ error: 'Valid userid required (in body or query)' });
       }
 
       console.log('Processing upload:', { 
@@ -139,7 +139,7 @@ export default async function handler(req, res) {
       const selectQuery = `
         SELECT p.postid, p.caption, p.fileurl, u.firstname, u.lastname
         FROM "Post" p
-        JOIN "User " u ON p.postedby = u.userid  -- Fixed: No extra space in table name
+        JOIN "User  " u ON p.postedby = u.userid  -- Fixed: No extra space in table name
         WHERE p.status = 1
         ORDER BY p.postid DESC
         LIMIT 50  -- Pagination to prevent overload on large datasets
