@@ -1,40 +1,36 @@
+// pages/api/Upload.js
 import multer from "multer";
-import { cloudinary } from "../../lib/cloudinary"; // your configured Cloudinary
+import { cloudinary } from "../../lib/cloudinary"; // config already in lib
 import { cors } from "../../lib/cors";
 import { pool } from "../../lib/database";
 
 export const config = {
-  api: { bodyParser: false }, // needed for multer
+  api: { bodyParser: false }, // disable default parser
 };
 
-// Multer memory storage (works on Vercel)
+// Multer memory storage (works in Vercel)
 const upload = multer({ storage: multer.memoryStorage() });
 
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
   const action = req.query.action;
-  console.log("Request method:", req.method, "Action:", action);
 
-  // ------------------ POST: Create Post ------------------
-  if (req.method === "POST" && action === "createpost") {
-    try {
-      // 1️⃣ Upload file to memory
+  try {
+    // -------------- POST: CREATE POST ----------------
+    if (req.method === "POST" && action === "createpost") {
+      // 1. Parse file
       const file = await new Promise((resolve, reject) => {
         upload.single("file")(req, res, (err) => {
           if (err) return reject(err);
-          if (!req.file) return reject(new Error("No file uploaded"));
+          if (!req.file) return reject(new Error("❌ No file uploaded"));
           resolve(req.file);
         });
       });
 
-      console.log("File uploaded to memory:", file.originalname, "Size:", file.size);
+      console.log("📂 Received file:", file.originalname, file.mimetype);
 
-      const { caption } = req.body;
-      const { userid } = req.query;
-      console.log("Caption:", caption, "UserId:", userid);
-
-      // 2️⃣ Upload file to Cloudinary from memory
+      // 2. Upload to Cloudinary
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           { resource_type: "auto", public_id: `post_${Date.now()}` },
@@ -46,9 +42,11 @@ export default async function handler(req, res) {
         stream.end(file.buffer);
       });
 
-      console.log("Cloudinary upload result:", result.secure_url);
+      console.log("☁️ Cloudinary Upload:", result.secure_url);
 
-      // 3️⃣ Insert into database
+      // 3. Save to DB
+      const { caption } = req.body || {};
+      const { userid } = req.query || {};
       const insertQuery = `
         INSERT INTO "Post" (caption, fileurl, postedby)
         VALUES ($1, $2, $3) RETURNING postid
@@ -56,20 +54,15 @@ export default async function handler(req, res) {
       const values = [caption, result.secure_url, userid];
       const dbResult = await pool.query(insertQuery, values);
 
-      res.status(200).json({
-        message: "File uploaded successfully",
+      return res.status(200).json({
+        message: "✅ File uploaded successfully",
         file: { url: result.secure_url, originalname: file.originalname },
         postid: dbResult.rows[0].postid,
       });
-    } catch (err) {
-      console.error("Upload Error:", err);
-      res.status(500).json({ error: err.message });
     }
-  }
 
-  // ------------------ GET: Fetch Posts ------------------
-  if (req.method === "GET" && action === "fetchimages") {
-    try {
+    // -------------- GET: FETCH POSTS ----------------
+    if (req.method === "GET" && action === "fetchimages") {
       const selectQuery = `
         SELECT p.postid, p.caption, p.fileurl, p.likescount, p.sharecount, p.commentscount,
                u.firstname, u.lastname
@@ -78,12 +71,13 @@ export default async function handler(req, res) {
         WHERE p.status = $1
         ORDER BY p.postid DESC
       `;
-      const values = [1];
-      const result = await pool.query(selectQuery, values);
-      res.status(200).json({ images: result.rows });
-    } catch (err) {
-      console.error("Fetch Images Error:", err);
-      res.status(500).json({ error: err.message });
+      const result = await pool.query(selectQuery, [1]);
+      return res.status(200).json({ images: result.rows });
     }
+
+    return res.status(405).json({ error: "Method Not Allowed" });
+  } catch (err) {
+    console.error("❌ Upload Error:", err);
+    return res.status(500).json({ error: err.message });
   }
 }
