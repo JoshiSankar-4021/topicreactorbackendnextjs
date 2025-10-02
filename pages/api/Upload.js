@@ -1,17 +1,17 @@
 import multer from 'multer';
-import { cloudinary } from '../../lib/cloudinary'; // Ensure this uses process.env for config
-import { pool } from '../../lib/database'; // Ensure this uses process.env.DATABASE_URL
+import { cloudinary } from '../../lib/cloudinary';
+import { pool } from '../../lib/database';
 import {cors} from '../../lib/cors';
 
 export const config = {
   api: {
-    bodyParser: false, // Required for multipart/form-data
+    bodyParser: false,
   },
 };
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max to avoid memory issues
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
       cb(null, true);
@@ -34,10 +34,10 @@ export default async function handler(req, res) {
   await cors(req, res);
 
   try {
-    console.log('Handler invoked:', { 
-      method: req.method, 
+    console.log('Handler invoked:', {
+      method: req.method,
       action: req.query?.action,
-      url: req.url 
+      url: req.url
     });
 
     console.log('Cloudinary ready:', !!cloudinary.config?.cloud_name);
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
           { 
             resource_type: 'auto', 
             public_id: `post_${userid}_${Date.now()}`, // Unique ID to avoid collisions
-            folder: `media_user/${useid}` // Optional: Organize assets in Cloudinary
+            folder: `media_user/${userid}` // Optional: Organize assets in Cloudinary
           },
           (error, result) => {
             if (error) {
@@ -96,11 +96,11 @@ export default async function handler(req, res) {
       // Insert into database (added status=1; assumes SERIAL postid)
       console.log('Inserting post into DB...');
       const insertQuery = `
-        INSERT INTO "Post" (caption, fileurl, postedby, status)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO "Post" (caption, fileurl, postedby)
+        VALUES ($1, $2, $3)
         RETURNING postid
       `;
-      const values = [caption.trim(), uploaded.secure_url, userid, 1]; // Trim caption, set status
+      const values = [caption.trim(), uploaded.secure_url, userid]; // Trim caption, set status
       const dbResult = await pool.query(insertQuery, values);
 
       if (!dbResult || !dbResult.rows || !dbResult.rows.length) {
