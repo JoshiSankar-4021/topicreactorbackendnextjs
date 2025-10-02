@@ -11,7 +11,6 @@ export const config = {
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
       cb(null, true);
@@ -139,7 +138,6 @@ export default async function handler(req, res) {
       res.status(200).json({ images: dbResult.rows });
 
     } else {
-      // Method not allowed
       res.setHeader('Allow', ['GET', 'POST']);
       res.status(405).json({ error: `Method ${method} Not Allowed` });
     }
