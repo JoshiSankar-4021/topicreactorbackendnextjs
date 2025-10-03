@@ -60,19 +60,19 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Valid userid required (as form field)' });
       }
 
-      console.log('Processing upload:', { 
-        filename: req.file.originalname, 
-        size: req.file.size, 
-        userid 
+      console.log('Processing upload:', {
+        filename: req.file.originalname,
+        size: req.file.size,
+        userid
       });
 
       // Upload to Cloudinary
       const uploaded = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { 
-            resource_type: 'auto', 
-            public_id: `post_${userid}_${Date.now()}`, // Unique ID to avoid collisions
-            folder: `media_user/${userid}` // Optional: Organize assets in Cloudinary
+          {
+            resource_type: 'auto',
+            public_id: `post_${userid}_${Date.now()}`,
+            folder: `media_user/${userid}`
           },
           (error, result) => {
             if (error) {
@@ -92,14 +92,13 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Upload to Cloudinary failed' });
       }
 
-      // Insert into database (added status=1; assumes SERIAL postid)
       console.log('Inserting post into DB...');
       const insertQuery = `
         INSERT INTO "Post" (caption, fileurl, postedby)
         VALUES ($1, $2, $3)
         RETURNING postid
       `;
-      const values = [caption.trim(), uploaded.secure_url, userid]; // Trim caption, set status
+      const values = [caption.trim(), uploaded.secure_url, userid];
       const dbResult = await pool.query(insertQuery, values);
 
       if (!dbResult || !dbResult.rows || !dbResult.rows.length) {
@@ -110,7 +109,7 @@ export default async function handler(req, res) {
       const postId = dbResult.rows[0].postid;
       console.log('Post created successfully:', postId);
 
-      res.status(201).json({ // 201 for resource created
+      res.status(201).json({
         message: 'Post created successfully',
         postId,
         url: uploaded.secure_url,
