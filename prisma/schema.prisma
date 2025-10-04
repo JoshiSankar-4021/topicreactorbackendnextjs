@@ -71,6 +71,7 @@ model Post{
   dislikescount BigInt @default(0)
   sharecount BigInt @default(0)
   commentscount BigInt @default(0)
+  repost BigInt @default(0)
   status Int @default(1) @db.SmallInt
   author User @relation(fields:[postedby],references:[userid])
   likes PostLikes[]

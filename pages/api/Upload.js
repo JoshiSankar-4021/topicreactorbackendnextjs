@@ -119,7 +119,7 @@ export default async function handler(req, res) {
       console.log('Fetching images/posts from DB...');
 
       const selectQuery = `
-        SELECT p.postid, p.caption, p.fileurl,p.likescount,p.sharecount,p.dislikescount,p.commentscount,u.firstname,u.lastname
+        SELECT p.postid, p.caption, p.fileurl,p.likescount,p.sharecount,p.dislikescount,p.commentscount,p.repost,u.firstname,u.lastname
         FROM "Post" p
         JOIN "User" u ON p.postedby = u.userid  -- Fixed: No extra space in table name
         WHERE p.status = 1
