@@ -115,10 +115,9 @@ if(req.method === "DELETE"){
     if(req.method === "PUT"){
         if(action === "update_profile"){
             const {userid} = req.query;
-            const {firstname,lastname,email,password,address,education,phone,gender} = req.body;
-            const updatequery = `UPDATE "User" SET firstname=$1,lastname=$2,email=$3,address=$5,
-            education=$6,phone=$7,gender=$8 where userid=$9`;
-            const values=[firstname,lastname,email,password,address,education,phone,gender,userid];
+            const {firstname,lastname,email,address,education,phone,gender} = req.body;
+            const updatequery = `UPDATE "User" SET firstname=$1,lastname=$2,email=$3,address=$4,education=$5,phone=$6,gender=$7 where userid=$8`;
+            const values=[firstname,lastname,email,address,education,phone,gender,userid];
             await pool.query(updatequery,values);
             res.status(200).json({message:"User details Updated"});
         }
