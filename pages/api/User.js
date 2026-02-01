@@ -5,8 +5,8 @@ async function User(req, res) {
 const handled = cors(req, res);
 if (handled) return;
 const action = req.query.action;
-
-if(req.method === "POST") {
+const method=req.method;
+if(method === "POST") {
 if(action === "registeruser") {
     const { firstname, lastname, email, password, address, education, phone, gender } = req.body;
     const query = `INSERT INTO "User" (firstname, lastname, email, password, address, education, phone, gender)
@@ -116,7 +116,7 @@ if(req.method === "DELETE"){
         if(action === "update_profile"){
             const {userid} = req.query;
             const {firstname,lastname,email,password,address,education,phone,gender} = req.body;
-            const updatequery = `UPDATE "User" SET firstname=$1,lastname=$2,email=$3,password=$4,address=$5,
+            const updatequery = `UPDATE "User" SET firstname=$1,lastname=$2,email=$3,address=$5,
             education=$6,phone=$7,gender=$8 where userid=$9`;
             const values=[firstname,lastname,email,password,address,education,phone,gender,userid];
             await pool.query(updatequery,values);
